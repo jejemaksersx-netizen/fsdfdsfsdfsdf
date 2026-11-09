@@ -2,7 +2,7 @@
 export default {
   content: [
     "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    "./*.{js,ts,jsx,tsx}", // ищем в корне
   ],
   theme: {
     extend: {
@@ -26,9 +26,6 @@ export default {
         'glass': '0 8px 32px 0 rgba(0, 0, 0, 0.37)',
         'glow-green': '0 0 20px rgba(63, 174, 122, 0.15)',
       },
-      animation: {
-        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-      }
     },
   },
   plugins: [],
