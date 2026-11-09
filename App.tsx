@@ -1,13 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Swords, Dices, Crosshair, Wallet, ChevronRight, Zap, Menu } from 'lucide-react';
 import { useLaunchParams } from '@telegram-apps/sdk-react';
 
 const useSafeLaunchParams = () => {
   try {
-    return useLaunchParams();
+    const params = useLaunchParams();
+    // Достаем данные из разных возможных мест SDK
+    const user = (params as any)?.initData?.user || (params as any)?.tgWebAppData?.user;
+    return { user };
   } catch (e) {
-    return { tgWebAppData: { user: { first_name: 'Player', username: 'player_one' } } };
+    return { user: { first_name: 'Player', username: 'player_one' } };
   }
 };
 
@@ -20,9 +23,8 @@ const GAMES = [
 
 export default function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const lp = useSafeLaunchParams();
+  const { user } = useSafeLaunchParams();
   
-  const user = lp?.tgWebAppData?.user;
   const userName = user ? `${user.first_name}` : 'Guest';
   const userHandle = user?.username ? `@${user.username}` : '@guest';
 
