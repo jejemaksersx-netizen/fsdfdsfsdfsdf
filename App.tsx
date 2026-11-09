@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, Crosshair, Wallet, ChevronRight, Zap, Menu, Bomb, Shield, X, Coins, TrendingUp, AlertTriangle, Trophy } from 'lucide-react';
+import { User, Swords, Crosshair, Wallet, ChevronRight, Zap, Menu, Bomb, Shield, X, Coins, TrendingUp, AlertTriangle, Trophy } from 'lucide-react';
 import { useLaunchParams } from '@telegram-apps/sdk-react';
 
 const API_URL = "https://reaperbet-backend.onrender.com";
