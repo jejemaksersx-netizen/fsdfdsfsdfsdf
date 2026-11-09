@@ -33,23 +33,25 @@ export default function App() {
 
   const [bet, setBet] = useState(100);
 
+  // MINES STATE
   const [minesCount, setMinesCount] = useState(3);
   const [isPlayingMines, setIsPlayingMines] = useState(false);
   const [grid, setGrid] = useState<('hidden'|'safe'|'mine')[]>(Array(25).fill('hidden'));
   const [currentWin, setCurrentWin] = useState(0);
   const [multiplier, setMultiplier] = useState(1.0);
 
+  // CRASH STATE
   const [isPlayingCrash, setIsPlayingCrash] = useState(false);
   const [crashMultiplier, setCrashMultiplier] = useState(1.0);
   const [crashStatus, setCrashStatus] = useState<'idle'|'playing'|'crashed'>('idle');
   const crashTimer = useRef<any>(null);
 
-  const [isPlayingSlots, setIsPlayingSlots] = useState(false);
+  // SLOTS STATE
   const [slotsGrid, setSlotsGrid] = useState<string[][]>([['skull','skull','skull'],['skull','skull','skull'],['skull','skull','skull']]);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winLines, setWinLines] = useState<any[]>([]);
-  const [slotsWin, setSlotsWin] = useState(0);
 
+  // ADMIN STATE
   const [adminClicks, setAdminClicks] = useState(0);
   const [showAdmin, setShowAdmin] = useState(false);
   const [adminTarget, setAdminTarget] = useState('');
@@ -95,6 +97,7 @@ export default function App() {
     setTimeout(() => setAdminClicks(0), 2000);
   };
 
+  // --- MINES ---
   const startMines = async () => {
     // @ts-ignore
     const initData = window.Telegram?.WebApp?.initData || "";
@@ -173,6 +176,7 @@ export default function App() {
     }
   };
 
+  // --- CRASH ---
   const startCrash = async () => {
     // @ts-ignore
     const initData = window.Telegram?.WebApp?.initData || "";
@@ -243,6 +247,7 @@ export default function App() {
     }
   };
 
+  // --- SLOTS ---
   const spinSlots = async () => {
     if (isSpinning) return;
     // @ts-ignore
@@ -251,7 +256,6 @@ export default function App() {
     
     setIsSpinning(true);
     setWinLines([]);
-    setSlotsWin(0);
     
     try {
       const res = await fetch(`${API_URL}/api/game/slots/spin`, {
@@ -266,7 +270,6 @@ export default function App() {
         setSlotsGrid(data.grid);
         setBalance(data.balance);
         setIsSpinning(false);
-        setSlotsWin(data.win);
         setWinLines(data.winning_lines);
         
         if (data.win > 0) {
@@ -280,6 +283,7 @@ export default function App() {
     }
   };
 
+  // --- ADMIN ---
   const handleAdminGive = async () => {
     // @ts-ignore
     const initData = window.Telegram?.WebApp?.initData || "";
@@ -297,9 +301,6 @@ export default function App() {
       setModal({ type: 'lose', title: 'Ошибка', text: e.message });
     }
   };
-
-  const userName = user ? user.first_name : (tgUser ? tgUser.first_name : 'Guest');
-  const userHandle = user?.username ? `@${user.username}` : (tgUser?.username ? `@${tgUser.username}` : '@guest');
 
   return (
     <div className="flex h-screen w-full bg-reaper-bg text-reaper-text font-sans overflow-hidden">
