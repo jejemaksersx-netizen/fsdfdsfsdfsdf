@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Swords, Crosshair, Wallet, ChevronRight, Zap, Menu, Bomb, Shield, X, Coins, TrendingUp, AlertTriangle, Trophy } from 'lucide-react';
+import { Swords, Crosshair, Wallet, ChevronRight, Zap, Menu, Bomb, Shield, X, Coins, TrendingUp, AlertTriangle, Trophy } from 'lucide-react';
 import { useLaunchParams } from '@telegram-apps/sdk-react';
 
 const API_URL = "https://reaperbet-backend.onrender.com";
@@ -33,25 +33,21 @@ export default function App() {
 
   const [bet, setBet] = useState(100);
 
-  // MINES STATE
   const [minesCount, setMinesCount] = useState(3);
   const [isPlayingMines, setIsPlayingMines] = useState(false);
   const [grid, setGrid] = useState<('hidden'|'safe'|'mine')[]>(Array(25).fill('hidden'));
   const [currentWin, setCurrentWin] = useState(0);
   const [multiplier, setMultiplier] = useState(1.0);
 
-  // CRASH STATE
   const [isPlayingCrash, setIsPlayingCrash] = useState(false);
   const [crashMultiplier, setCrashMultiplier] = useState(1.0);
   const [crashStatus, setCrashStatus] = useState<'idle'|'playing'|'crashed'>('idle');
   const crashTimer = useRef<any>(null);
 
-  // SLOTS STATE
   const [slotsGrid, setSlotsGrid] = useState<string[][]>([['skull','skull','skull'],['skull','skull','skull'],['skull','skull','skull']]);
   const [isSpinning, setIsSpinning] = useState(false);
   const [winLines, setWinLines] = useState<any[]>([]);
 
-  // ADMIN STATE
   const [adminClicks, setAdminClicks] = useState(0);
   const [showAdmin, setShowAdmin] = useState(false);
   const [adminTarget, setAdminTarget] = useState('');
@@ -97,7 +93,6 @@ export default function App() {
     setTimeout(() => setAdminClicks(0), 2000);
   };
 
-  // --- MINES ---
   const startMines = async () => {
     // @ts-ignore
     const initData = window.Telegram?.WebApp?.initData || "";
@@ -176,7 +171,6 @@ export default function App() {
     }
   };
 
-  // --- CRASH ---
   const startCrash = async () => {
     // @ts-ignore
     const initData = window.Telegram?.WebApp?.initData || "";
@@ -247,7 +241,6 @@ export default function App() {
     }
   };
 
-  // --- SLOTS ---
   const spinSlots = async () => {
     if (isSpinning) return;
     // @ts-ignore
@@ -283,7 +276,6 @@ export default function App() {
     }
   };
 
-  // --- ADMIN ---
   const handleAdminGive = async () => {
     // @ts-ignore
     const initData = window.Telegram?.WebApp?.initData || "";
