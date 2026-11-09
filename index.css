@@ -1,0 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Syne:wght@600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-reaper-bg text-reaper-text antialiased overflow-hidden;
+    background-image: 
+      radial-gradient(circle at 15% 50%, rgba(46, 125, 91, 0.08) 0%, transparent 50%),
+      radial-gradient(circle at 85% 30%, rgba(63, 174, 122, 0.05) 0%, transparent 50%);
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-reaper-surface/60 backdrop-blur-xl border border-reaper-border/50 shadow-glass;
+  }
+  .glass-button {
+    @apply bg-reaper-surface/40 backdrop-blur-md border border-reaper-border/60 transition-all duration-300;
+  }
+  .glass-button:hover {
+    @apply bg-reaper-border/40 border-reaper-glow/40 shadow-glow-green;
+  }
+  .text-glow {
+    text-shadow: 0 0 20px rgba(63, 174, 122, 0.4);
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
