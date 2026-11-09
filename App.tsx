@@ -17,6 +17,7 @@ const useSafeLaunchParams = () => {
 const GAMES = [
   { id: 'mines', name: 'Mines', icon: Bomb, color: 'from-red-500/20 to-orange-500/5' },
   { id: 'crash', name: 'Crash', icon: TrendingUp, color: 'from-blue-500/20 to-cyan-500/5' },
+  { id: 'slots', name: 'Slots', icon: Coins, color: 'from-yellow-500/20 to-amber-500/5' },
   { id: 'pvp', name: 'PvP Arena', icon: Swords, color: 'from-teal-500/20 to-cyan-500/5' },
 ];
 
@@ -28,24 +29,27 @@ export default function App() {
   const [balance, setBalance] = useState(0);
   const [activeGame, setActiveGame] = useState<string | null>(null);
   
-  // Модалки
   const [modal, setModal] = useState<{ type: 'win'|'lose'|null, title: string, text: string }>({ type: null, title: '', text: '' });
 
-  // --- MINES STATE ---
   const [bet, setBet] = useState(100);
+
   const [minesCount, setMinesCount] = useState(3);
   const [isPlayingMines, setIsPlayingMines] = useState(false);
   const [grid, setGrid] = useState<('hidden'|'safe'|'mine')[]>(Array(25).fill('hidden'));
   const [currentWin, setCurrentWin] = useState(0);
   const [multiplier, setMultiplier] = useState(1.0);
 
-  // --- CRASH STATE ---
   const [isPlayingCrash, setIsPlayingCrash] = useState(false);
   const [crashMultiplier, setCrashMultiplier] = useState(1.0);
   const [crashStatus, setCrashStatus] = useState<'idle'|'playing'|'crashed'>('idle');
   const crashTimer = useRef<any>(null);
 
-  // --- АДМИНКА ---
+  const [isPlayingSlots, setIsPlayingSlots] = useState(false);
+  const [slotsGrid, setSlotsGrid] = useState<string[][]>([['skull','skull','skull'],['skull','skull','skull'],['skull','skull','skull']]);
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [winLines, setWinLines] = useState<any[]>([]);
+  const [slotsWin, setSlotsWin] = useState(0);
+
   const [adminClicks, setAdminClicks] = useState(0);
   const [showAdmin, setShowAdmin] = useState(false);
   const [adminTarget, setAdminTarget] = useState('');
@@ -71,11 +75,10 @@ export default function App() {
       })
       .catch(err => console.error(err));
     } else {
-      setUser({ first_name: 'Test', username: 'test', is_admin: true });
+      setUser({ first_name: 'Test', username: 'test', is_admin: true, id: 7554546588 });
       setBalance(10000);
     }
     
-    // Очистка таймера при выходе
     return () => { if (crashTimer.current) clearInterval(crashTimer.current); };
   }, []);
 
@@ -84,7 +87,7 @@ export default function App() {
     setAdminClicks(newClicks);
     if (newClicks >= 5) {
       if (user?.is_admin || user?.id === 7554546588) {
-        setActiveGame(null); // Перекидываем в меню
+        setActiveGame(null);
         setShowAdmin(true);
       }
       setAdminClicks(0);
@@ -92,7 +95,6 @@ export default function App() {
     setTimeout(() => setAdminClicks(0), 2000);
   };
 
-  // --- MINES LOGIC ---
   const startMines = async () => {
     // @ts-ignore
     const initData = window.Telegram?.WebApp?.initData || "";
@@ -119,7 +121,6 @@ export default function App() {
     if (!isPlayingMines || grid[index] !== 'hidden') return;
     // @ts-ignore
     const initData = window.Telegram?.WebApp?.initData || "";
-    
     try {
       const res = await fetch(`${API_URL}/api/game/mines/click`, {
         method: 'POST',
@@ -128,7 +129,6 @@ export default function App() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail);
-      
       const newGrid = [...grid];
       if (data.status === 'mine') {
         newGrid[index] = 'mine';
@@ -173,7 +173,6 @@ export default function App() {
     }
   };
 
-  // --- CRASH LOGIC ---
   const startCrash = async () => {
     // @ts-ignore
     const initData = window.Telegram?.WebApp?.initData || "";
@@ -194,11 +193,14 @@ export default function App() {
       
       let current = 1.0;
       crashTimer.current = setInterval(async () => {
-        current += 0.05 + (current * 0.01); // Ускорение
+        current += 0.05 + (current * 0.01);
         setCrashMultiplier(current);
         
-        // Стучимся на бэк, не упали ли мы
-        const checkRes = await fetch(`${API_URL}/api/game/crash/check/${user.id}?current_multiplier=${current}`);
+        const checkRes = await fetch(`${API_URL}/api/game/crash/check`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData, current_multiplier: current })
+        });
         const checkData = await checkRes.json();
         
         if (checkData.status === 'crashed') {
@@ -241,6 +243,43 @@ export default function App() {
     }
   };
 
+  const spinSlots = async () => {
+    if (isSpinning) return;
+    // @ts-ignore
+    const initData = window.Telegram?.WebApp?.initData || "";
+    if (!initData) return;
+    
+    setIsSpinning(true);
+    setWinLines([]);
+    setSlotsWin(0);
+    
+    try {
+      const res = await fetch(`${API_URL}/api/game/slots/spin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ initData, bet })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.detail);
+      
+      setTimeout(() => {
+        setSlotsGrid(data.grid);
+        setBalance(data.balance);
+        setIsSpinning(false);
+        setSlotsWin(data.win);
+        setWinLines(data.winning_lines);
+        
+        if (data.win > 0) {
+          setModal({ type: 'win', title: 'Выигрыш!', text: `Вы выиграли ${data.win}!` });
+        }
+      }, 2000);
+      
+    } catch (e: any) {
+      setIsSpinning(false);
+      setModal({ type: 'lose', title: 'Ошибка', text: e.message });
+    }
+  };
+
   const handleAdminGive = async () => {
     // @ts-ignore
     const initData = window.Telegram?.WebApp?.initData || "";
@@ -265,7 +304,6 @@ export default function App() {
   return (
     <div className="flex h-screen w-full bg-reaper-bg text-reaper-text font-sans overflow-hidden">
       
-      {/* УНИВЕРСАЛЬНАЯ МОДАЛКА (Вместо alert) */}
       <AnimatePresence>
         {modal.type && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setModal({type:null, title:'', text:''})}>
@@ -283,7 +321,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* АДМИНКА */}
       <AnimatePresence>
         {showAdmin && (
           <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
@@ -310,7 +347,6 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* САЙДБАРЫ И ХЕДЕР (Адаптированные) */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -467,8 +503,62 @@ export default function App() {
                   )}
                 </div>
               </motion.div>
+            ) : activeGame === 'slots' ? (
+              <motion.div key="slots" initial={{opacity:0, y:10}} animate={{opacity:1, y:0}} exit={{opacity:0}} className="max-w-md mx-auto pb-20">
+                <button onClick={() => {setActiveGame(null); setIsSpinning(false);}} className="text-sm text-reaper-muted hover:text-white mb-4 flex items-center gap-2">
+                  <ChevronRight className="rotate-180 w-4 h-4"/> Назад
+                </button>
+                
+                <div className="bg-reaper-surface border border-reaper-border rounded-2xl p-4 sm:p-5 mb-4 relative overflow-hidden">
+                  <h2 className="font-display text-2xl font-bold mb-4">Reaper Slots</h2>
+                  
+                  <div className="flex justify-center gap-2 mb-6 bg-black/60 p-3 rounded-xl border border-reaper-border/50 shadow-inner">
+                    {slotsGrid.map((col, colIndex) => (
+                      <div key={colIndex} className="flex flex-col gap-2 relative">
+                        {col.map((sym, rowIndex) => {
+                          const flatIndex = colIndex * 3 + rowIndex;
+                          const isWin = winLines.some(l => {
+                            if (l.line_index === 0 && [0,1,2].includes(flatIndex)) return true;
+                            if (l.line_index === 1 && [3,4,5].includes(flatIndex)) return true;
+                            if (l.line_index === 2 && [6,7,8].includes(flatIndex)) return true;
+                            return false;
+                          });
+
+                          return (
+                            <motion.div 
+                              key={rowIndex}
+                              animate={isSpinning ? { y: [-20, 20, -20, 0], transition: { duration: 0.2, repeat: Infinity } } : {}}
+                              className={`w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center rounded-lg border-2 transition-colors ${isWin ? 'border-reaper-gold bg-reaper-gold/20 shadow-[0_0_15px_rgba(201,165,75,0.5)]' : 'border-reaper-border bg-reaper-bg'}`}
+                            >
+                              {sym === 'skull' && <Bomb className="w-8 h-8 text-white/80" />}
+                              {sym === 'scythe' && <Crosshair className="w-8 h-8 text-red-400" />}
+                              {sym === 'potion' && <Shield className="w-8 h-8 text-blue-400" />}
+                              {sym === 'eye' && <User className="w-8 h-8 text-purple-400" />}
+                              {sym === 'coin' && <Coins className="w-8 h-8 text-reaper-gold" />}
+                              {sym === 'wild' && <Zap className="w-8 h-8 text-green-400" />}
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-xs text-reaper-muted uppercase mb-1 block">Ставка</label>
+                      <input type="number" value={bet} onChange={e=>setBet(Number(e.target.value))} className="w-full bg-black/50 border border-reaper-border rounded-lg p-3 text-white outline-none font-mono"/>
+                    </div>
+                    <button 
+                      onClick={spinSlots} 
+                      disabled={isSpinning}
+                      className={`w-full font-bold py-4 rounded-xl text-lg transition-all ${isSpinning ? 'bg-reaper-border text-reaper-muted cursor-not-allowed' : 'bg-reaper-glow text-black hover:scale-[1.02]'}`}
+                    >
+                      {isSpinning ? 'Крутим...' : 'Спин'}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
             ) : (
-              // ГЛАВНОЕ МЕНЮ
               <motion.div key="menu" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} className="max-w-4xl mx-auto">
                 <div className="text-center mb-10 mt-4">
                   <h2 className="font-display font-extrabold text-4xl md:text-5xl mb-2">
@@ -476,7 +566,7 @@ export default function App() {
                   </h2>
                   <p className="text-reaper-muted">Выбери свою игру.</p>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {GAMES.map((game) => (
                     <button
                       key={game.id}
